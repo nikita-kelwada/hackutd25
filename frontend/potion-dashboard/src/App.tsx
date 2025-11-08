@@ -1,64 +1,39 @@
-import { useState, useEffect } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
-import "./App.css";
+import { useEffect, useState } from "react";
+import { getCauldrons, type Cauldron } from "./services/cauldrons";
 
-function App() {
-  const [count, setCount] = useState(0);
-  const [cauldrons, setCauldrons] = useState([]);
+export default function App() {
+  const [items, setItems] = useState<Cauldron[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    async function getCauldrons() {
-      const apiUrl = "http://localhost:8000/api/cauldrons";
-      console.log("Attempting to fetch cauldrons from API...");
-
+    (async () => {
       try {
-        const response = await fetch(apiUrl);
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        const data = await response.json();
-
-        console.log("Successfully fetched data:");
-        console.log(data);
-
-        setCauldrons(data);
-      } catch (error) {
-        console.error("Error fetching cauldron data:", error);
+        setItems(await getCauldrons());
+      } catch (e: any) {
+        setErr(e?.message ?? "Failed to fetch");
+      } finally {
+        setLoading(false);
       }
-    }
-
-    getCauldrons();
+    })();
   }, []);
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+  if (loading) return <main className="p-8">Loading…</main>;
+  if (err) return <main className="p-8 text-red-500">Error: {err}</main>;
 
-      {/* You can now use your data! 
-          This will show how many cauldrons you fetched. */}
-      <h2>Fetched {cauldrons.length} cauldrons.</h2>
-    </>
+  return (
+    <main className="min-h-screen bg-zinc-900 text-zinc-100 p-8">
+      <h1 className="text-3xl font-bold mb-6">Cauldrons ({items.length})</h1>
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {items.map(c => (
+          <div key={c.id} className="rounded-2xl p-5 bg-zinc-800">
+            <div className="text-lg font-semibold">{c.name}</div>
+            <div className="text-sm opacity-70">{c.id}</div>
+            <div className="mt-2 text-sm">Max volume: {c.max_volume}</div>
+            <div className="text-sm">Lat/Lng: {c.latitude}, {c.longitude}</div>
+          </div>
+        ))}
+      </div>
+    </main>
   );
 }
-
-export default App;
