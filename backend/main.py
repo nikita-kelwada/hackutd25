@@ -121,6 +121,38 @@ def get_cauldron_drain_events(
         raise HTTPException(status_code=500, detail=str(e))
 
 # (Your existing __name__ == "__main__" block)
+@app.get("/api/data/latest")
+def data_latest_snapshot():
+    rows = fetch_upstream("/api/Data") or []
+    if not rows:
+        return {}
+    return rows[-1].get("cauldron_levels") or {}
+
+@app.get("/api/market")
+def get_market():
+    return fetch_upstream("/api/Information/market")
+
+# ---------- Derived flags (placeholder tickets) ----------
+def derive_flags(cauldrons: List[Dict[str, Any]]):
+    flags: List[Dict[str, Any]] = []
+    for c in cauldrons or []:
+        cap = c.get("max_volume")
+        name = c.get("name")
+        cid = c.get("id")
+        if isinstance(cap, (int, float)) and cap < 700:
+            flags.append({
+                "id": f"small-cap-{cid}",
+                "severity": "warning",
+                "message": f"{name} has small capacity ({cap}). Monitor utilization.",
+                "cauldronId": cid,
+            })
+    return flags
+
+@app.get("/api/tickets")
+def tickets():
+    data = get_cauldrons_proxy()
+    return derive_flags(data if isinstance(data, list) else [])
+
 if __name__ == "__main__":
     import uvicorn, os
     port = int(os.getenv("PORT", "5001"))
