@@ -5,7 +5,7 @@ import LevelBar from "./components/LevelBar";
 import CauldronLevels from "./components/CauldronLevels";
 
 type LatestSnapshot = Record<string, number>;
-import PotionMap from './components/PotionMap';
+import PotionMap from "./components/PotionMap";
 
 export default function App() {
   const [cauldrons, setCauldrons] = useState<Cauldron[]>([]);
@@ -50,13 +50,18 @@ export default function App() {
 
   return (
     <main className="min-h-screen bg-zinc-900 text-zinc-100 p-8">
-            <section className="h-[600px]"> {/* Add this new section for the map */}
+      <section className="h-[600px]">
+        {" "}
+        {/* Add this new section for the map */}
         <h2 className="text-2xl font-bold mb-3">🗺️ Cauldron Map</h2>
         <div className="h-full rounded-xl overflow-hidden">
           <PotionMap />
         </div>
       </section>
-      <h1 className="text-3xl font-bold mb-6">Cauldrons ({cauldrons.length})</h1>
+
+      <h1 className="text-3xl font-bold mb-6">
+        Cauldrons ({cauldrons.length})
+      </h1>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {cauldrons.map((c) => {
@@ -79,11 +84,12 @@ export default function App() {
                 {current != null ? (
                   <>
                     Current level:{" "}
-                    <span className="font-semibold">
-                      {current.toFixed(2)}
-                    </span>
+                    <span className="font-semibold">{current.toFixed(2)}</span>
                     {pct != null && (
-                      <> · <span>{pct.toFixed(0)}%</span></>
+                      <>
+                        {" "}
+                        · <span>{pct.toFixed(0)}%</span>
+                      </>
                     )}
                     <LevelBar current={current} max={c.max_volume} />
                   </>

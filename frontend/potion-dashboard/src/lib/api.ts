@@ -1,6 +1,9 @@
-import axios from "axios";
+// src/lib/api.ts
+import axios from 'axios';
 
-// FastAPI backend origin
+// Your backend runs on port 5001 according to main.py
+const API_URL = 'http://localhost:5001';
+
 export const api = axios.create({
-  baseURL: "http://127.0.0.1:5001",
+  baseURL: API_URL,
 });
