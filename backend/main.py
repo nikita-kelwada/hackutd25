@@ -1,42 +1,59 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import requests
+from typing import List, Dict, Any
 
 app = FastAPI()
 
-# --- This is the "permission slip" FOR YOUR OWN APP ---
-# This tells the browser: "It's OK to let http://localhost:5173 talk to me."
-origins = [
-    "http://localhost:5173",  # The address of your React frontend
-]
-
+# Allow Vite dev (both localhost + 127.0.0.1)
+origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all methods (GET, POST, etc.)
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-# ----------------------------------------------------
 
-# This is your new "proxy" endpoint
+@app.get("/health")
+def health():
+    return {"ok": True}
+
+# ---------- Upstream proxy ----------
 @app.get("/api/cauldrons")
 def get_cauldrons_proxy():
-    # This is the server-to-server request. No browser, no CORS!
     api_url = "https://hackutd2025.eog.systems/api/Information/cauldrons"
-
     try:
-        # Your server calls the API
-        response = requests.get(api_url)
-        # Check if the request was successful
-        response.raise_for_status() 
-        # Return the JSON data from the API
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        # Handle any errors
-        return {"error": str(e)}, 500
+        r = requests.get(api_url, timeout=10)
+        r.raise_for_status()
+        return r.json()
+    except requests.RequestException as e:
+        # bubble up as a proper 502 for the client
+        raise HTTPException(status_code=502, detail=str(e))
 
-# This makes the server run when you execute the file
+# ---------- Derived flags ----------
+def derive_flags(cauldrons: List[Dict[str, Any]]):
+    flags: List[Dict[str, Any]] = []
+    for c in cauldrons or []:
+        cap = c.get("max_volume")
+        name = c.get("name")
+        cid = c.get("id")
+        if isinstance(cap, (int, float)) and cap < 700:
+            flags.append({
+                "id": f"small-cap-{cid}",
+                "severity": "warning",
+                "message": f"{name} has small capacity ({cap}). Monitor utilization.",
+                "cauldronId": cid,
+            })
+    return flags
+
+@app.get("/api/tickets")
+def tickets():
+    data = get_cauldrons_proxy()
+    return derive_flags(data if isinstance(data, list) else [])
+
+# Optional: only if you want to run `python main.py`
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import uvicorn, os
+    port = int(os.getenv("PORT", "5001"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
